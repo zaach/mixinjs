@@ -19,43 +19,43 @@ var mixinTestSuite = {
   "test: object should inherit property from mixin" : function() {
     Object.mix(this.obj, this.mixme);
 
-    assertEquals(this.obj.foo, 'bar');
+    assertEqual(this.obj.foo, 'bar');
   },
 
   "test: object should inherit method from mixin" : function() {
     this.mixme.fun = function(){ return 'babar' };
     Object.mix(this.obj, this.mixme);
 
-    assertEquals(this.obj.fun(), 'babar');
+    assertEqual(this.obj.fun(), 'babar');
   },
 
   "test: predefined object property should shadow mixed in property" : function() {
     this.obj.foo = 'soap';
     Object.mix(this.obj, this.mixme);
 
-    assertEquals(this.obj.foo, 'soap');
+    assertEqual(this.obj.foo, 'soap');
   },
 
   "test: postdefined object property should shadow mixed in property" : function() {
     Object.mix(this.obj, this.mixme);
     this.obj.foo = 'boo';
 
-    assertEquals(this.obj.foo, 'boo');
+    assertEqual(this.obj.foo, 'boo');
   },
 
   "test: object should inherit from multiple mixins" : function() {
     var m2 = { hello:'world' };
     Object.mix(this.obj, this.mixme, m2);
 
-    assertEquals(this.obj.foo, 'bar');
-    assertEquals(this.obj.hello, 'world');
+    assertEqual(this.obj.foo, 'bar');
+    assertEqual(this.obj.hello, 'world');
   },
 
   "test: latest mixin should overshadow properties of previous mixins" : function() {
     var m2 = { foo:'bar2' };
     Object.mix(this.obj, this.mixme, m2);
 
-    assertEquals(this.obj.foo, 'bar2');
+    assertEqual(this.obj.foo, 'bar2');
   },
 
   "test: object should retain previous values after mixin is mixed out" : function() {
@@ -66,7 +66,7 @@ var mixinTestSuite = {
     Object.unmix(this.obj, this.mixme);
 
     assertUndefined(this.obj.foo);
-    assertEquals(this.obj.hello, 'world');
+    assertEqual(this.obj.hello, 'world');
   },
 
   "test: object should retain previous values after multiple mixins are mixed out" : function() {
@@ -77,7 +77,7 @@ var mixinTestSuite = {
     Object.unmix(this.obj, this.mixme);
     assertUndefined(this.obj.foo);
 
-    assertEquals(this.obj.hello, 'world');
+    assertEqual(this.obj.hello, 'world');
 
     Object.unmix(this.obj, m2);
     assertUndefined(this.obj.hello);
@@ -88,7 +88,7 @@ var mixinTestSuite = {
 
     this.mixme.foo = 'boo';
 
-    assertEquals(this.obj.foo, 'boo');
+    assertEqual(this.obj.foo, 'boo');
   },
 
   "test: object should mix in to Object.prototype": function () {

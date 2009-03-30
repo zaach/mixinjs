@@ -1,6 +1,6 @@
 //<%
 /**
- * jsUnity Universal JavaScript Testing Framework v0.5
+ * jsUnity Universal JavaScript Testing Framework v0.6
  * http://jsunity.com/
  *
  * Copyright (c) 2009 Ates Goral
@@ -9,70 +9,166 @@
  */
 
 jsUnity = (function () {
+    function fmt(str) {
+        var a = Array.prototype.slice.call(arguments, 1);
+        return str.replace(/\?/g, function () { return a.shift(); });
+    }
+
+    function hash(v) {
+        if (v instanceof Object) {
+            var arr = [];
+            
+            for (var p in v) {
+                arr.push(p);
+                arr.push(hash(v[p]));    
+            }
+            
+            return arr.join("#");
+        } else {
+            return String(v);
+        }
+    }
+    
     var defaultAssertions = {
-        assertTrue: function (expr) {
-            if (!expr) {
-                throw "Expression does not evaluate to true";
+        assertException: function (fn, message) {
+            try {
+                fn instanceof Function && fn();
+            } catch (e) {
+                return;
+            }
+
+            throw fmt("?: (?) does not raise an exception or not a function",
+                message || "assertException", fn);
+        },
+
+        assertTrue: function (actual, message) {
+            if (!actual) {
+                throw fmt("?: (?) does not evaluate to true",
+                    message || "assertTrue", actual);
             }
         },
         
-        assertFalse: function (expr) {
-            if (expr) {
-                throw "Condition does not evaluate to false";
+        assertFalse: function (actual, message) {
+            if (actual) {
+                throw fmt("?: (?) does not evaluate to false",
+                    message || "assertFalse", actual);
             }
         },
         
-        assertEquals: function (expected, actual) {
+        assertIdentical: function (expected, actual, message) {
             if (expected !== actual) {
-                throw "Actual value does not match what's expected: [expected] "
-                    + expected + ", [actual] " + actual;
+                throw fmt("?: (?) is not identical to (?)",
+                    message || "assertIdentical", actual, expected);
+            }
+        },
+
+        assertNotIdentical: function (expected, actual, message) {
+            if (expected === actual) {
+                throw fmt("?: (?) is identical to (?)",
+                    message || "assertNotIdentical", actual, expected);
+            }
+        },
+
+        assertEqual: function (expected, actual, message) {
+            if (hash(expected) != hash(actual)) {
+                throw fmt("?: (?) is not equal to (?)",
+                    message || "assertEqual", actual, expected);
             }
         },
         
-        assertNotEquals: function (unexpected, actual) {
-            if (unexpected === actual) {
-                throw "Actual value matches the unexpected value: " + actual;
+        assertNotEqual: function (expected, actual, message) {
+            if (hash(expected) == hash(actual)) {
+                throw fmt("?: (?) is equal to (?)",
+                    message || "assertNotEqual", actual, expected);
             }
         },
         
-        assertNull: function (object) {
-            if (object !== null) {
-                throw "Object is not null";
+        assertMatch: function (re, actual, message) {
+            if (!re.test(actual)) {
+                throw fmt("?: (?) does not match (?)",
+                    message || "assertMatch", actual, re);
             }
         },
         
-        assertNotNull: function (object) {
-            if (object === null) {
-                throw "Object is null";
+        assertNotMatch: function (re, actual, message) {
+            if (re.test(actual)) {
+                throw fmt("?: (?) matches (?)",
+                    message || "assertNotMatch", actual, re);
             }
         },
         
-        assertUndefined: function (value) {
-            if (value !== undefined) {
-                throw "Value is not undefined";
+        assertTypeOf: function (typ, actual, message) {
+            if (typeof actual !== typ) {
+                throw fmt("?: (?) is not of type (?)",
+                    message || "assertTypeOf", actual, typ);
+            }
+        },
+
+        assertNotTypeOf: function (typ, actual, message) {
+            if (typeof actual === typ) {
+                throw fmt("?: (?) is of type (?)",
+                    message || "assertNotTypeOf", actual, typ);
             }
         },
         
-        assertNotUndefined: function (value) {
-            if (value === undefined) {
-                throw "Value is undefined";
+        assertInstanceOf: function (cls, actual, message) {
+            if (!(actual instanceof cls)) {
+                throw fmt("?: (?) is not an instance of (?)",
+                    message || "assertInstanceOf", actual, cls);
+            }
+        },
+
+        assertNotInstanceOf: function (cls, actual, message) {
+            if (actual instanceof cls) {
+                throw fmt("?: (?) is an instance of (?)",
+                    message || "assertNotInstanceOf", actual, cls);
+            }
+        },
+
+        assertNull: function (actual, message) {
+            if (actual !== null) {
+                throw fmt("?: (?) is not null",
+                    message || "assertNull", actual);
             }
         },
         
-        assertNaN: function (value) {
-            if (!isNaN(value)) {
-                throw "Value is not NaN";
+        assertNotNull: function (actual, message) {
+            if (actual === null) {
+                throw fmt("?: (?) is null",
+                    message || "assertNotNull", actual);
             }
         },
         
-        assertNotNaN: function (value) {
-            if (isNaN(value)) {
-                throw "Value is NaN";
+        assertUndefined: function (actual, message) {
+            if (actual !== undefined) {
+                throw fmt("?: (?) is not undefined",
+                    message || "assertUndefined", actual);
             }
         },
         
-        fail: function () {
-            throw "Test failed";
+        assertNotUndefined: function (actual, message) {
+            if (actual === undefined) {
+                throw fmt("?: (?) is undefined",
+                    message || "assertNotUndefined", actual);
+            }
+        },
+        
+        assertNaN: function (actual, message) {
+            if (!isNaN(actual)) {
+                throw fmt("?: (?) is not NaN",
+                    message || "assertNaN", actual);
+            }
+        },
+        
+        assertNotNaN: function (actual, message) {
+            if (isNaN(actual)) {
+                throw fmt("?: (?) is NaN",
+                    message || "assertNotNaN", actual);
+            }
+        },
+        
+        fail: function (message) {
+            throw message || "fail";
         }
     };
     
@@ -90,7 +186,7 @@ jsUnity = (function () {
         }
         
         return {
-            name: tokens[1],
+            name: tokens[1].length ? tokens[1] : undefined,
             body: tokens[2]
         };
     }
@@ -109,18 +205,18 @@ jsUnity = (function () {
 
         var probeInside = new Function(
             splitFunction(probeOutside).body + str);
-        
+
         var tokenRe = /(\w+)/g; // todo: wiser regex
         var tokens;
-        
+
         while ((tokens = tokenRe.exec(str))) {
             var token = tokens[1];
             var fn;
     
             if (!obj[token]
                 && (fn = probeInside(token))
-                && !probeOutside(token)) {
-                    
+                && fn != probeOutside(token)) {
+
                 obj[token] = fn;
             }
         }
@@ -163,19 +259,18 @@ jsUnity = (function () {
     }
 
     function parseSuiteObject(obj) {
-        var suite = {
-            suiteName: obj.suiteName,
-            tests: []
-        };
+        var suite = new jsUnity.TestSuite(obj.suiteName, obj);
 
         for (var name in obj) {
-            var fn = obj[name];
-            
-            if (obj.hasOwnProperty(name) && typeof fn === "function") {
-                if (/^test/.test(name)) {
-                    suite.tests.push({ name: name, fn: fn });
-                } else if (/^setUp|tearDown$/.test(name)) {
-                    suite[name] = fn;
+            if (obj.hasOwnProperty(name)) {
+                var fn = obj[name];
+
+                if (typeof fn === "function") {
+                    if (/^test/.test(name)) {
+                        suite.tests.push({ name: name, fn: fn });
+                    } else if (/^setUp|tearDown$/.test(name)) {
+                        suite[name] = fn;
+                    }
                 }
             }
         }
@@ -183,21 +278,23 @@ jsUnity = (function () {
         return suite;
     }
 
-    function parseSuite(v) {
-        if (v instanceof Function) {
-            return parseSuiteFunction(v);
-        } else if (v instanceof Array) {
-            return parseSuiteArray(v);
-        } else if (v instanceof Object) {
-            return parseSuiteObject(v);
-        } else if (typeof v === "string") {
-            return parseSuiteString(v);
-        } else {
-            throw "Must be a function, array, object or string.";
-        }
-    }
-
     return {
+        TestSuite: function (suiteName, scope) {
+            this.suiteName = suiteName;
+            this.scope = scope;
+            this.tests = [];
+            this.setUp = undefined;
+            this.tearDown = undefined;
+        },
+
+        TestResults: function () {
+            this.suiteName = undefined;
+            this.total = 0;
+            this.passed = 0;
+            this.failed = 0;
+            this.duration = 0;
+        },
+
         assertions: defaultAssertions,
 
         env: {
@@ -220,18 +317,32 @@ jsUnity = (function () {
 
         error: function (s) { this.log("[ERROR] " + s); },
 
+        compile: function (v) {
+            if (v instanceof jsUnity.TestSuite) {
+                return v;
+            } else if (v instanceof Function) {
+                return parseSuiteFunction(v);
+            } else if (v instanceof Array) {
+                return parseSuiteArray(v);
+            } else if (v instanceof Object) {
+                return parseSuiteObject(v);
+            } else if (typeof v === "string") {
+                return parseSuiteString(v);
+            } else {
+                throw "Argument must be a function, array, object, string or "
+                    + "TestSuite instance.";
+            }
+        },
+
         run: function () {
-            var results = {
-                total: 0,
-                passed: 0
-            };
+            var results = new jsUnity.TestResults();
 
             var suiteNames = [];
             var start = jsUnity.env.getDate();
 
             for (var i = 0; i < arguments.length; i++) {
                 try {
-                    var suite = parseSuite(arguments[i]);
+                    var suite = jsUnity.compile(arguments[i]);
                 } catch (e) {
                     this.error("Invalid test suite: " + e);
                     return false;
@@ -250,9 +361,9 @@ jsUnity = (function () {
                     var test = suite.tests[j];
     
                     try {
-                        suite.setUp && suite.setUp();
-                        test.fn.call(suite);
-                        suite.tearDown && suite.tearDown();
+                        suite.setUp && suite.setUp.call(suite.scope);
+                        test.fn.call(suite.scope);
+                        suite.tearDown && suite.tearDown.call(suite.scope);
 
                         results.passed++;
 
